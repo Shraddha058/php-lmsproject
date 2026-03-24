@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: marketing-mysql-secret
+type: Opaque
+stringData:
+  MYSQL_DATABASE: "marketing"
+  MYSQL_USER: "marketing"
+  MYSQL_PASSWORD: "marketing"
+  MYSQL_ROOT_PASSWORD: "root"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: marketing-mysql
+spec:
+  serviceName: marketing-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marketing-mysql
+  template:
+    metadata: { labels: { app: marketing-mysql } }
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          ports: [{ containerPort: 3306 }]
+          envFrom: [{ secretRef: { name: marketing-mysql-secret } }]
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata: { name: mysql-data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources: { requests: { storage: 10Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marketing-mysql
+spec:
+  selector: { app: marketing-mysql }
+  ports:
+    - port: 3306
+      targetPort: 3306

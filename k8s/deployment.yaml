@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketing-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: marketing-service
+  template:
+    metadata:
+      labels:
+        app: marketing-service
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/your-org/marketing-service:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 9000 }]
+          envFrom:
+            - configMapRef: { name: marketing-service-config }
+            - secretRef: { name: marketing-service-secret }
+          readinessProbe:
+            tcpSocket: { port: 9000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 9000 }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests: { cpu: "250m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }

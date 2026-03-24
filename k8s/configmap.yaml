@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marketing-service-config
+data:
+  APP_NAME: "Marketing Service"
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  APP_URL: "http://marketing-service.local"
+  DB_CONNECTION: "mysql"
+  DB_HOST: "marketing-mysql"
+  DB_PORT: "3306"
+  DB_DATABASE: "marketing"
+

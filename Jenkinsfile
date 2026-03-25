@@ -4,7 +4,7 @@
 // @@ -2,14 +2,59 @@
    agent any
 +
-+  options { disableConcurrentBuilds() }
+  options { disableConcurrentBuilds() }
 +
    environment {
 -    IMAGE_NAME = "marketing-service"

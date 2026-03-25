@@ -70,7 +70,7 @@ pipeline {
 
   post {
     always {
-      sh "docker image rm -f ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_URI} || true"
+      sh "docker image rm -f ${env.IMAGE_NAME}:${env.IMAGE_TAG} ${env.IMAGE_URI} || true"
     }
   }
 }

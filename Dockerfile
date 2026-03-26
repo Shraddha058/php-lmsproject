@@ -2,19 +2,19 @@
 FROM composer:2 AS composer-deps
 WORKDIR /app
 
-COPY composer.json composer.lock* ./
-RUN if [ -f composer.json ]; then \
-    composer install --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader; \
-    fi
+COPY laravel/composer.json laravel/composer.lock ./
+RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 # ---------- Stage 2: Frontend ----------
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
 
-COPY . .
+COPY laravel/package*.json ./
+RUN npm install
 
-RUN if [ -f package.json ]; then npm install; fi
-RUN if [ -f vite.config.js ] || [ -f vite.config.ts ]; then npm run build; fi
+COPY laravel/resources ./resources
+COPY laravel/vite.config.js ./
+RUN npm run build
 
 # ---------- Stage 3: Runtime ----------
 FROM php:8.3-fpm-alpine AS runtime
@@ -24,15 +24,21 @@ RUN apk add --no-cache bash curl icu-dev libpng-dev libjpeg-turbo-dev freetype-d
   && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring intl gd zip opcache \
   && rm -rf /tmp/* /var/cache/apk/*
 
+# create user
 RUN addgroup -S laravel && adduser -S laravel -G laravel
 
 WORKDIR /var/www/html
 
-COPY --chown=laravel:laravel . .
+# copy laravel app
+COPY --chown=laravel:laravel laravel/ .
+
+# copy vendor
 COPY --from=composer-deps --chown=laravel:laravel /app/vendor ./vendor
+
+# copy frontend build
 COPY --from=frontend-builder --chown=laravel:laravel /app/public/build ./public/build
 
-# ⚠️ ONLY keep these if files actually exist
+# configs
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 

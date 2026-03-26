@@ -5,6 +5,7 @@ WORKDIR /app
 COPY laravel/composer.json laravel/composer.lock ./
 RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
+
 # ---------- Stage 2: Frontend ----------
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
@@ -13,8 +14,11 @@ COPY laravel/package*.json ./
 RUN npm install
 
 COPY laravel/resources ./resources
+COPY laravel/public ./public
 COPY laravel/vite.config.js ./
+
 RUN npm run build
+
 
 # ---------- Stage 3: Runtime ----------
 FROM php:8.3-fpm-alpine AS runtime
@@ -29,16 +33,18 @@ RUN addgroup -S laravel && adduser -S laravel -G laravel
 
 WORKDIR /var/www/html
 
-# copy laravel app
+# copy Laravel app
 COPY --chown=laravel:laravel laravel/ .
 
-# copy vendor
+# copy dependencies
 COPY --from=composer-deps --chown=laravel:laravel /app/vendor ./vendor
 
 # copy frontend build
 COPY --from=frontend-builder --chown=laravel:laravel /app/public/build ./public/build
 
-# configs
+
+# ⚠️ ONLY KEEP IF THESE FILES EXIST
+# (check docker/php folder)
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 

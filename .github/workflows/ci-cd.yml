@@ -1,18 +1,61 @@
-name: Debug Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
     branches: ["main"]
 
+env:
+  IMAGE_NAME: marketing-service
+  IMAGE_TAG: latest
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REPO: marketing-service
+
 jobs:
-  debug:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      # ✅ Checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check Files
+      # ✅ Fix Node warning (optional)
+      - name: Use Node 24
+        run: echo "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true" >> $GITHUB_ENV
+
+      # ✅ AWS Credentials
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # ✅ Login to ECR
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ✅ Build Image
+      - name: Build Docker Image
+        run: docker build -t $IMAGE_NAME:$IMAGE_TAG .
+
+      # ✅ Tag Image
+      - name: Tag Image
         run: |
-          echo "Listing files:"
-          ls -la
+          docker tag $IMAGE_NAME:$IMAGE_TAG \
+          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+
+      # ✅ Push Image
+      - name: Push to ECR
+        run: |
+          docker push \
+          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+
+      # ✅ Deploy to EKS
+      - name: Deploy to EKS
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name marketing-eks
+          kubectl set image deployment/marketing-service \
+          app=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+          kubectl rollout status deployment/marketing-service

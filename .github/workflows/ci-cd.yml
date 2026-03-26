@@ -1,69 +1,18 @@
-name: CI/CD Pipeline
+name: Debug Pipeline
 
 on:
   push:
-    branches: [ "main" ]
-
-permissions:
-  contents: read
-
-env:
-  IMAGE_NAME: marketing-service
-  AWS_REGION: us-east-1   # ✅ hardcoded to avoid missing secret issue
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  ECR_REPO: marketing-service
-  IMAGE_TAG: latest
+    branches: ["main"]
 
 jobs:
-  build-and-deploy:
+  debug:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    # ✅ FIXED Checkout
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    # ✅ Configure AWS
-    - name: Configure AWS
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-
-    # ✅ Debug AWS (VERY IMPORTANT)
-    - name: Verify AWS
-      run: aws sts get-caller-identity
-
-    # ✅ Login to ECR
-    - name: Login to ECR
-      uses: aws-actions/amazon-ecr-login@v2
-
-    # ✅ Build Docker Image
-    - name: Build Image
-      run: |
-        docker build -t $IMAGE_NAME:$IMAGE_TAG .
-
-    # ✅ Tag Image
-    - name: Tag Image
-      run: |
-        docker tag $IMAGE_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
-
-    # ✅ Push to ECR
-    - name: Push to ECR
-      run: |
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
-
-    # ✅ Update kubeconfig
-    - name: Update kubeconfig
-      run: |
-        aws eks update-kubeconfig --region $AWS_REGION --name marketing-eks
-
-    # ✅ Deploy to Kubernetes
-    - name: Deploy to EKS
-      run: |
-        kubectl set image deployment/marketing-service app=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
-        kubectl rollout status deployment/marketing-service
+      - name: Check Files
+        run: |
+          echo "Listing files:"
+          ls -la

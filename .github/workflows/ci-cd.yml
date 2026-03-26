@@ -4,9 +4,12 @@ on:
   push:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 env:
   IMAGE_NAME: marketing-service
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_REGION: us-east-1   # ✅ hardcoded to avoid missing secret issue
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   ECR_REPO: marketing-service
   IMAGE_TAG: latest
@@ -17,9 +20,11 @@ jobs:
 
     steps:
 
-    # ✅ Checkout code
-    - name: Checkout
+    # ✅ FIXED Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     # ✅ Configure AWS
     - name: Configure AWS
@@ -27,7 +32,11 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+        aws-region: us-east-1
+
+    # ✅ Debug AWS (VERY IMPORTANT)
+    - name: Verify AWS
+      run: aws sts get-caller-identity
 
     # ✅ Login to ECR
     - name: Login to ECR
